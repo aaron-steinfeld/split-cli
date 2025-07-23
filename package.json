@@ -1,0 +1,21 @@
+{
+  "name": "split-flag-cli",
+  "version": "1.0.0",
+  "description": "CLI to delete Split.io feature flags",
+  "main": "delete-split-flag.js",
+  "scripts": {
+    "start": "ts-node src/delete-split-flag.ts"
+  },
+  "bin": {
+    "delete-split-flag": "dist/delete-split-flag.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/yargs": "^17.0.33",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
