@@ -18,7 +18,7 @@ export async function deleteSegment(apiKey: string, workspaceId: string, segment
     if (logLevel >= LogLevel.TRACE) {
       const safeHeaders = { ...headers, Authorization: 'Bearer [REDACTED]' };
       console.log('[TRACE] Headers:', safeHeaders);
-    } 
+    }
     try {
       const resp = await axios.delete(url, {
         headers,
@@ -48,7 +48,7 @@ export async function listSegmentsFromEndpoint(apiKey: string, workspaceId: stri
     'Authorization': `Bearer ${apiKey}`,
     'Accept': 'application/json',
   };
-  
+
   const allItems: SegmentInfo[] = [];
   let hasMore = true;
   let offset = 0;
@@ -70,14 +70,25 @@ export async function listSegmentsFromEndpoint(apiKey: string, workspaceId: stri
         console.log(`[DEBUG] List ${endpoint} response data:`, resp.data);
       }
       
-      if (resp.status === 200 && resp.data && resp.data.objects) {
-        const items = resp.data.objects.map((item: any) => ({
-          name: item.name,
-          type: endpoint
-        }));
-        allItems.push(...items);
-        
-        hasMore = resp.data.objects.length === limit;
+      if (resp.status === 200) {
+        let items: any[] = [];
+
+        // Handle both response formats: { objects: [...] } or [...] directly
+        if (resp.data && resp.data.objects && Array.isArray(resp.data.objects)) {
+          items = resp.data.objects;
+        } else if (Array.isArray(resp.data)) {
+          items = resp.data;
+        }
+
+        if (items.length > 0) {
+          const mappedItems = items.map((item: any) => ({
+            name: item.name,
+            type: endpoint
+          }));
+          allItems.push(...mappedItems);
+        }
+
+        hasMore = items.length === limit;
         offset += limit;
       } else {
         console.error(`Failed to list ${endpoint}: ${resp.status} - ${resp.data && resp.data.message ? resp.data.message : resp.data}`);

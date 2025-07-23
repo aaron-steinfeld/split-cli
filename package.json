@@ -1,13 +1,14 @@
 {
-  "name": "split-flag-cli",
+  "name": "split-cli",
   "version": "1.0.0",
-  "description": "CLI to delete Split.io feature flags",
-  "main": "delete-split-flag.js",
+  "description": "CLI tool for managing Split.io resources (flags, segments, environments)",
+  "main": "dist/cli.js",
   "scripts": {
-    "start": "ts-node src/delete-split-flag.ts"
+    "start": "ts-node src/cli.ts",
+    "build": "tsc"
   },
   "bin": {
-    "delete-split-flag": "dist/delete-split-flag.js"
+    "split-cli": "dist/cli.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
