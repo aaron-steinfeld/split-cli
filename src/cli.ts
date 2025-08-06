@@ -57,8 +57,10 @@ async function main() {
       description: 'Enable trace logging (includes headers)',
       default: false,
     })
-    .conflicts('all', 'name')
     .check(argv => {
+      if (argv['all'] && argv['name']) {
+        throw new Error('Cannot specify both --all and --name');
+      }
       if (!argv['name'] && !argv['all']) {
         throw new Error('You must specify either --name or --all');
       }

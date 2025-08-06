@@ -65,11 +65,11 @@ export async function listEnvironments(apiKey: string, workspaceId: string, logL
         console.log(`[DEBUG] List environments response data:`, resp.data);
       }
       
-      if (resp.status === 200 && resp.data && resp.data.objects) {
-        const items = resp.data.objects.map((item: any) => item.name);
+      if (resp.status === 200 && Array.isArray(resp.data)) {
+        const items = resp.data.map((item: any) => item.name);
         allItems.push(...items);
         
-        hasMore = resp.data.objects.length === limit;
+        hasMore = resp.data.length === limit;
         offset += limit;
       } else {
         console.error(`Failed to list environments: ${resp.status} - ${resp.data && resp.data.message ? resp.data.message : resp.data}`);
