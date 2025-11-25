@@ -1,22 +1,32 @@
 {
   "name": "split-cli",
   "version": "1.0.0",
-  "description": "CLI tool for managing Split.io resources (flags, segments, environments)",
-  "main": "dist/cli.js",
-  "scripts": {
-    "start": "ts-node src/cli.ts",
-    "build": "tsc"
-  },
+  "description": "CLI tool for managing Split.io resources with cascading delete support",
+  "main": "dist/index.js",
   "bin": {
-    "split-cli": "dist/cli.js"
+    "split-cli": "./dist/index.js"
   },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "split",
+    "split.io",
+    "feature-flags",
+    "cli",
+    "delete"
+  ],
+  "author": "",
   "dependencies": {
-    "axios": "^1.6.7",
-    "yargs": "^17.7.2"
+    "axios": "^1.9.0",
+    "commander": "^13.1.0"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.33",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
   }
 }
