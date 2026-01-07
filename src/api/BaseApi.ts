@@ -54,6 +54,7 @@ export abstract class BaseApi implements SplitApi {
 
   /**
    * Make an API request with debug logging and error handling
+   * Includes automatic retry with exponential backoff for 429 (rate limit) responses
    */
   protected async request<T>(config: AxiosRequestConfig): Promise<T> {
     const fullUrl = `${this.getBaseUrl()}/${config.url || ''}`;
@@ -74,87 +75,106 @@ export abstract class BaseApi implements SplitApi {
       return {} as T;
     }
 
-    const response: AxiosResponse<T> = await axios.request(requestConfig);
+    // Retry logic for 429 responses
+    const maxRetries = 3;
+    const retryDelays = [10000, 15000, 20000]; // 10s, 15s, 20s
+    let attempt = 0;
 
-    // Helper to build request log details
-    const buildRequestLog = (): string[] => {
-      const logLines: string[] = [];
+    while (attempt <= maxRetries) {
+      const response: AxiosResponse<T> = await axios.request(requestConfig);
 
-      logLines.push(`\nAPI CALL`);
-      logLines.push(`  Request:`);
-      logLines.push(`    Method: ${config.method?.toUpperCase()}`);
-      logLines.push(`    URL: ${fullUrl}`);
+      // Helper to build request log details
+      const buildRequestLog = (): string[] => {
+        const logLines: string[] = [];
 
-      // Sanitize headers for logging
-      const headers = requestConfig.headers || {};
-      const sanitizedHeaders: Record<string, string> = {};
-      for (const key in headers) {
-        if (key === 'Authorization' || key === 'x-api-key') {
-          const value = String(headers[key]);
-          // Show format (e.g., "Bearer [REDACTED 36 chars]") without revealing the key
-          if (value.startsWith('Bearer ')) {
-            const keyLength = value.substring(7).length;
-            sanitizedHeaders[key] = `Bearer [REDACTED ${keyLength} chars]`;
+        logLines.push(`\nAPI CALL`);
+        logLines.push(`  Request:`);
+        logLines.push(`    Method: ${config.method?.toUpperCase()}`);
+        logLines.push(`    URL: ${fullUrl}`);
+
+        // Sanitize headers for logging
+        const headers = requestConfig.headers || {};
+        const sanitizedHeaders: Record<string, string> = {};
+        for (const key in headers) {
+          if (key === 'Authorization' || key === 'x-api-key') {
+            const value = String(headers[key]);
+            // Show format (e.g., "Bearer [REDACTED 36 chars]") without revealing the key
+            if (value.startsWith('Bearer ')) {
+              const keyLength = value.substring(7).length;
+              sanitizedHeaders[key] = `Bearer [REDACTED ${keyLength} chars]`;
+            } else {
+              sanitizedHeaders[key] = `[REDACTED ${value.length} chars]`;
+            }
           } else {
-            sanitizedHeaders[key] = `[REDACTED ${value.length} chars]`;
+            sanitizedHeaders[key] = String(headers[key]);
           }
-        } else {
-          sanitizedHeaders[key] = String(headers[key]);
         }
-      }
-      logLines.push(`    Headers: ${JSON.stringify(sanitizedHeaders, null, 2).split('\n').join('\n    ')}`);
+        logLines.push(`    Headers: ${JSON.stringify(sanitizedHeaders, null, 2).split('\n').join('\n    ')}`);
 
-      if (config.params) {
-        logLines.push(`    Params: ${JSON.stringify(config.params, null, 2).split('\n').join('\n    ')}`);
-      }
-      if (config.data) {
-        const dataStr = JSON.stringify(config.data, null, 2);
-        if (dataStr.length > 1000) {
-          logLines.push(`    Body: [${dataStr.length} bytes]`);
-        } else {
-          logLines.push(`    Body: ${dataStr.split('\n').join('\n    ')}`);
+        if (config.params) {
+          logLines.push(`    Params: ${JSON.stringify(config.params, null, 2).split('\n').join('\n    ')}`);
         }
-      }
+        if (config.data) {
+          const dataStr = JSON.stringify(config.data, null, 2);
+          if (dataStr.length > 1000) {
+            logLines.push(`    Body: [${dataStr.length} bytes]`);
+          } else {
+            logLines.push(`    Body: ${dataStr.split('\n').join('\n    ')}`);
+          }
+        }
 
-      logLines.push(`  Response:`);
-      logLines.push(`    Status: ${response.status} ${response.statusText}`);
-      const responseStr = JSON.stringify(response.data, null, 2);
-      if (responseStr.length > 1000) {
-        logLines.push(`    Body: [${responseStr.length} bytes]`);
-      } else {
-        logLines.push(`    Body: ${responseStr.split('\n').join('\n    ')}`);
-      }
+        logLines.push(`  Response:`);
+        logLines.push(`    Status: ${response.status} ${response.statusText}`);
+        const responseStr = JSON.stringify(response.data, null, 2);
+        if (responseStr.length > 1000) {
+          logLines.push(`    Body: [${responseStr.length} bytes]`);
+        } else {
+          logLines.push(`    Body: ${responseStr.split('\n').join('\n    ')}`);
+        }
 
-      return logLines;
-    };
+        return logLines;
+      };
 
-    // Log request and response together in debug mode
-    if (this.debug) {
-      console.log(buildRequestLog().join('\n'));
-    }
-
-    // Check if the response status indicates success (2xx)
-    if (response.status < 200 || response.status >= 300) {
-      // Log write operation failures (unless in debug mode or it's a commonly-handled error)
-      const isWriteOperation = config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase());
-      const errorData = response.data as any;
-      const isApiTokenError = errorData?.message?.includes('has apitokens associated');
-      const is404 = response.status === 404;
-
-      // Log if: write operation AND not in debug mode AND not a handled error
-      if (!this.debug && isWriteOperation && !isApiTokenError && !is404) {
+      // Log request and response together in debug mode
+      if (this.debug) {
         console.log(buildRequestLog().join('\n'));
       }
 
-      // Include response body in error for better error handling
-      const errorMessage = errorData?.message || response.statusText;
-      const error = new Error(`API request failed with status ${response.status}: ${errorMessage}`) as any;
-      error.response = response.data;
-      error.status = response.status;
-      throw error;
+      // Handle 429 (Too Many Requests) with retry
+      if (response.status === 429 && attempt < maxRetries) {
+        const delayMs = retryDelays[attempt];
+        console.log(`\nRate limit hit (429). Retrying in ${delayMs}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        attempt++;
+        continue;
+      }
+
+      // Check if the response status indicates success (2xx)
+      if (response.status < 200 || response.status >= 300) {
+        // Log write operation failures (unless in debug mode or it's a commonly-handled error)
+        const isWriteOperation = config.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method.toUpperCase());
+        const errorData = response.data as any;
+        const isApiTokenError = errorData?.message?.includes('has apitokens associated');
+        const is404 = response.status === 404;
+
+        // Log if: write operation AND not in debug mode AND not a handled error
+        if (!this.debug && isWriteOperation && !isApiTokenError && !is404) {
+          console.log(buildRequestLog().join('\n'));
+        }
+
+        // Include response body in error for better error handling
+        const errorMessage = errorData?.message || response.statusText;
+        const error = new Error(`API request failed with status ${response.status}: ${errorMessage}`) as any;
+        error.response = response.data;
+        error.status = response.status;
+        throw error;
+      }
+
+      return response.data;
     }
 
-    return response.data;
+    // This should never be reached, but TypeScript needs it
+    throw new Error('Max retries exceeded');
   }
 
   /**
