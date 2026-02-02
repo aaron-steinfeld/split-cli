@@ -92,13 +92,11 @@ export class LegacySplitApi extends BaseApi {
     this.logApiOperation(`*** GET ENVIRONMENT ${environmentId} for workspace ${workspaceId} ***`);
 
     try {
-      const requestConfig: AxiosRequestConfig = {
-        method: 'get',
-        url: `environments/ws/${workspaceId}/${environmentId}`,
-      };
-
-      const environment = await this.request<Environment>(requestConfig);
-      return environment;
+      // The API doesn't support getting a single environment by ID
+      // We need to list all environments and find the matching one
+      const environments = await this.listEnvironments(workspaceId);
+      const environment = environments.find(env => env.id === environmentId || env.name === environmentId);
+      return environment || null;
     } catch (error) {
       return null;
     }
