@@ -11,6 +11,6 @@ export interface CliConfig {
 export interface DeleteOptions {
   cascade: boolean;
   force?: boolean;
-  nonInteractive?: boolean;
-  ignoreErrors?: boolean;
+  yes?: boolean;
+  skipOnError?: boolean;
 }

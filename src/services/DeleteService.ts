@@ -42,7 +42,7 @@ export class DeleteService {
     }
 
     // Show the deletion tree and get confirmation
-    if (options.nonInteractive) {
+    if (options.yes) {
       const message = this.formatDeletionTree(tree, options.cascade);
       console.log(message);
     } else {
@@ -55,7 +55,7 @@ export class DeleteService {
 
     // Execute the deletion
     const report = new DeletionReport();
-    await this.executeDeletion(tree, !!options.ignoreErrors, report);
+    await this.executeDeletion(tree, !!options.skipOnError, report);
     report.print();
     return !report.hadFailures;
   }
