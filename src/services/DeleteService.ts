@@ -4,6 +4,7 @@
 
 import { SplitApi } from '../api/SplitApi';
 import { confirmDeletion } from '../utils/stdin';
+import { DeletionReport } from './DeletionReport';
 import {
   ResourceType,
   DeleteTreeNode,
@@ -53,7 +54,10 @@ export class DeleteService {
     }
 
     // Execute the deletion
-    return await this.executeDeletion(tree, options.ignoreErrors);
+    const report = new DeletionReport();
+    await this.executeDeletion(tree, !!options.ignoreErrors, report);
+    report.print();
+    return !report.hadFailures;
   }
 
   /**
@@ -523,27 +527,22 @@ export class DeleteService {
   /**
    * Execute deletion of the tree (children first, parent last)
    */
-  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean = false): Promise<boolean> {
-    // Delete children first (post-order traversal)
+  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean, report: DeletionReport): Promise<boolean> {
     for (const child of node.children) {
-      const success = await this.executeDeletion(child, skipOnError);
-      if (!success) {
-        if (skipOnError) {
-          console.warn(`⚠️  Skipping failed child: ${child.type} '${child.name}'`);
-          continue;
-        }
-        console.error(`Failed to delete child: ${child.type} '${child.name}'`);
+      const success = await this.executeDeletion(child, skipOnError, report);
+      if (!success && !skipOnError) {
         return false;
       }
     }
 
-    // Then delete the node itself
     const success = await this.deleteNode(node);
-    if (!success && skipOnError) {
-      console.warn(`⚠️  Skipping failed node: ${node.type} '${node.name}'`);
-      return true;
+    report.record(node.type, node.name, success, success ? undefined : 'deletion failed');
+
+    if (!success && !skipOnError) {
+      return false;
     }
-    return success;
+
+    return true;
   }
 
   /**
