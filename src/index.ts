@@ -26,6 +26,8 @@ interface CommonOptions {
   cascade: boolean;
   dryRun: boolean;
   debug: boolean;
+  nonInteractive: boolean;
+  ignoreErrors: boolean;
 }
 
 /**
@@ -52,6 +54,8 @@ async function executeDelete(
     // Prepare delete options
     const deleteOptions: DeleteOptions = {
       cascade: options.cascade,
+      nonInteractive: options.nonInteractive,
+      ignoreErrors: options.ignoreErrors,
     };
 
     // Execute the deletion
@@ -62,7 +66,7 @@ async function executeDelete(
       process.exit(0);
     } else {
       console.error(`\n❌ Failed to delete ${type} '${name}'`);
-      process.exit(1);
+      process.exit(options.ignoreErrors ? 0 : 1);
     }
   } catch (error) {
     if (error instanceof Error) {
@@ -70,7 +74,7 @@ async function executeDelete(
     } else {
       console.error(`\n❌ Unknown error occurred`);
     }
-    process.exit(1);
+    process.exit(options.ignoreErrors ? 0 : 1);
   }
 }
 
@@ -88,6 +92,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete all child resources (flags, segments, environments, traffic types)')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (workspaceId: string, options: Omit<CommonOptions, 'workspace'>) => {
@@ -97,6 +103,8 @@ deleteCmd
       workspace: workspaceId,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -110,6 +118,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete all split definitions in this environment')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (nameOrId: string, options: CommonOptions) => {
@@ -119,6 +129,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -132,6 +144,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete all definitions across all environments')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (name: string, options: CommonOptions) => {
@@ -141,6 +155,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -154,6 +170,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete segment including all keys')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (name: string, options: CommonOptions) => {
@@ -163,6 +181,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -176,6 +196,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete large segment including all keys')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (name: string, options: CommonOptions) => {
@@ -185,6 +207,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -198,6 +222,8 @@ deleteCmd
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--cascade', 'Delete rule-based segment including all rules')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (name: string, options: CommonOptions) => {
@@ -207,6 +233,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: options.cascade || false,
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });
@@ -219,6 +247,8 @@ deleteCmd
   .option('--api-key <key>', 'Split.io API key (or use SPLIT_API_KEY env var)')
   .option('--base-url <url>', 'Split.io API base URL (default: https://api.split.io/internal/api/v2)')
   .option('--dry-run', 'Show what would be deleted without actually deleting')
+  .option('--non-interactive', 'Skip confirmation prompts (for CI/scripted usage)')
+  .option('--ignore-errors', 'Continue on errors and exit 0 (best-effort cleanup)')
   .option('--debug', 'Enable debug logging')
   .showHelpAfterError()
   .action(async (trafficTypeId: string, options: CommonOptions) => {
@@ -228,6 +258,8 @@ deleteCmd
       workspace: options.workspace,
       cascade: false, // Traffic types don't cascade
       dryRun: options.dryRun || false,
+      nonInteractive: options.nonInteractive || false,
+      ignoreErrors: options.ignoreErrors || false,
       debug: options.debug || false,
     });
   });

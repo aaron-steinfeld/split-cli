@@ -41,15 +41,19 @@ export class DeleteService {
     }
 
     // Show the deletion tree and get confirmation
-    const confirmed = await this.confirmDeletion(tree, options.cascade);
-
-    if (!confirmed) {
-      console.log('Deletion cancelled.');
-      return false;
+    if (options.nonInteractive) {
+      const message = this.formatDeletionTree(tree, options.cascade);
+      console.log(message);
+    } else {
+      const confirmed = await this.confirmDeletion(tree, options.cascade);
+      if (!confirmed) {
+        console.log('Deletion cancelled.');
+        return false;
+      }
     }
 
     // Execute the deletion
-    return await this.executeDeletion(tree);
+    return await this.executeDeletion(tree, options.ignoreErrors);
   }
 
   /**
@@ -519,18 +523,27 @@ export class DeleteService {
   /**
    * Execute deletion of the tree (children first, parent last)
    */
-  private async executeDeletion(node: DeleteTreeNode): Promise<boolean> {
+  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean = false): Promise<boolean> {
     // Delete children first (post-order traversal)
     for (const child of node.children) {
-      const success = await this.executeDeletion(child);
+      const success = await this.executeDeletion(child, skipOnError);
       if (!success) {
+        if (skipOnError) {
+          console.warn(`⚠️  Skipping failed child: ${child.type} '${child.name}'`);
+          continue;
+        }
         console.error(`Failed to delete child: ${child.type} '${child.name}'`);
         return false;
       }
     }
 
     // Then delete the node itself
-    return await this.deleteNode(node);
+    const success = await this.deleteNode(node);
+    if (!success && skipOnError) {
+      console.warn(`⚠️  Skipping failed node: ${node.type} '${node.name}'`);
+      return true;
+    }
+    return success;
   }
 
   /**
