@@ -4,6 +4,7 @@
 
 import { SplitApi } from '../api/SplitApi';
 import { confirmDeletion } from '../utils/stdin';
+import { DeletionReport } from './DeletionReport';
 import {
   ResourceType,
   DeleteTreeNode,
@@ -41,15 +42,22 @@ export class DeleteService {
     }
 
     // Show the deletion tree and get confirmation
-    const confirmed = await this.confirmDeletion(tree, options.cascade);
-
-    if (!confirmed) {
-      console.log('Deletion cancelled.');
-      return false;
+    if (options.yes) {
+      const message = this.formatDeletionTree(tree, options.cascade);
+      console.log(message);
+    } else {
+      const confirmed = await this.confirmDeletion(tree, options.cascade);
+      if (!confirmed) {
+        console.log('Deletion cancelled.');
+        return false;
+      }
     }
 
     // Execute the deletion
-    return await this.executeDeletion(tree);
+    const report = new DeletionReport();
+    await this.executeDeletion(tree, !!options.skipOnError, report);
+    report.print();
+    return !report.hadFailures;
   }
 
   /**
@@ -519,18 +527,22 @@ export class DeleteService {
   /**
    * Execute deletion of the tree (children first, parent last)
    */
-  private async executeDeletion(node: DeleteTreeNode): Promise<boolean> {
-    // Delete children first (post-order traversal)
+  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean, report: DeletionReport): Promise<boolean> {
     for (const child of node.children) {
-      const success = await this.executeDeletion(child);
-      if (!success) {
-        console.error(`Failed to delete child: ${child.type} '${child.name}'`);
+      const success = await this.executeDeletion(child, skipOnError, report);
+      if (!success && !skipOnError) {
         return false;
       }
     }
 
-    // Then delete the node itself
-    return await this.deleteNode(node);
+    const success = await this.deleteNode(node);
+    report.record(node.type, node.name, success, success ? undefined : 'deletion failed');
+
+    if (!success && !skipOnError) {
+      return false;
+    }
+
+    return true;
   }
 
   /**

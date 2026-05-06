@@ -151,6 +151,8 @@ split-cli delete traffic-type tt_user123 -w ws_abc123
 - `-w, --workspace <id>`: Workspace ID (required for most commands)
 - `--cascade`: Delete all child resources (default: false)
 - `--dry-run`: Preview what would be deleted without actually deleting
+- `--yes`: Skip confirmation prompts (for CI/scripted usage)
+- `--skip-on-error`: Continue on errors and exit 0 (best-effort cleanup)
 - `--debug`: Enable debug logging with detailed API request/response information
 
 ### Examples
@@ -222,9 +224,9 @@ All resource deletions will **fail** if the resource has any child resources or 
 ## Safety Features
 
 1. **Explicit Cascade Requirement**: You must explicitly use `--cascade` to delete resources with children
-2. **Interactive Confirmation**: Shows a tree of all resources to be deleted and requires confirmation
+2. **Interactive Confirmation**: Shows a tree of all resources to be deleted and requires confirmation (bypass with `--yes`)
 3. **Dry-Run Mode**: Test deletions without making changes
-4. **Error Handling**: Interactive prompts to retry, skip, or abort on errors
+4. **Error Handling**: Interactive prompts to retry, skip, or abort on errors (auto-skips with `--skip-on-error`)
 5. **Sanitized Logging**: API keys are never shown in debug logs
 
 ## Architecture
