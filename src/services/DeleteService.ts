@@ -527,22 +527,16 @@ export class DeleteService {
   /**
    * Execute deletion of the tree (children first, parent last)
    */
-  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean, report: DeletionReport): Promise<boolean> {
+  private async executeDeletion(node: DeleteTreeNode, skipOnError: boolean, report: DeletionReport): Promise<void> {
     for (const child of node.children) {
-      const success = await this.executeDeletion(child, skipOnError, report);
-      if (!success && !skipOnError) {
-        return false;
+      await this.executeDeletion(child, skipOnError, report);
+      if (report.hadFailures && !skipOnError) {
+        return;
       }
     }
 
     const success = await this.deleteNode(node);
-    report.record(node.type, node.name, success, success ? undefined : 'deletion failed');
-
-    if (!success && !skipOnError) {
-      return false;
-    }
-
-    return true;
+    report.record(node.type, node.name, success);
   }
 
   /**
